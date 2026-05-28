@@ -4,6 +4,7 @@ import json
 
 import streamlit as st
 
+from src.dashboard.artifact_bootstrap import ensure_artifacts
 from src.dashboard.components import render_page_shell, render_section_header
 from src.dashboard.config import ARTIFACT_PATHS
 from src.dashboard.data_access import load_churn_outputs, load_forecast_comparison, load_inventory_outputs, load_mlflow_summary, load_monitoring_outputs, load_segmentation_outputs
@@ -12,6 +13,9 @@ from src.dashboard.reporting import build_pdf_report, dataframe_to_csv_bytes
 
 def render_reports_page() -> None:
     render_page_shell("Reports", "Artifact index and exported business reports.")
+    with st.spinner("Preparing report artifacts..."):
+        ensure_artifacts("forecasting", "segmentation", "churn", "inventory", "monitoring")
+
     render_section_header("Artifact Index")
     for name, path in ARTIFACT_PATHS.items():
         st.write(f"- **{name}**: `{path}`")

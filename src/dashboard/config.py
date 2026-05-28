@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
-PROCESSED_DIR = ROOT_DIR / "processed"
-FIGURES_DIR = PROCESSED_DIR / "figures"
-MODELS_DIR = PROCESSED_DIR / "models"
-MONITORING_DIR = ROOT_DIR / "monitoring" / "drift_reports"
+
+# Allow environment-variable overrides so Streamlit Cloud / Docker deployments
+# can redirect artifact directories without code changes.
+PROCESSED_DIR = Path(os.environ.get("RETAILPULSE_PROCESSED_DIR", ROOT_DIR / "processed"))
+FIGURES_DIR = Path(os.environ.get("RETAILPULSE_FIGURES_DIR", PROCESSED_DIR / "figures"))
+MODELS_DIR = Path(os.environ.get("RETAILPULSE_MODELS_DIR", PROCESSED_DIR / "models"))
+MONITORING_DIR = Path(os.environ.get("RETAILPULSE_MONITORING_DIR", ROOT_DIR / "monitoring" / "drift_reports"))
 
 
 @dataclass(frozen=True)

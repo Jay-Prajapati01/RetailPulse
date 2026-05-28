@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import logging
+import time
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Callable
+
+import streamlit as st
 
 from src.dashboard.config import ARTIFACT_PATHS, MONITORING_DIR, PROCESSED_DIR
 
+LOGGER = logging.getLogger("retailpulse.bootstrap")
 
 PipelineRunner = Callable[[], object]
 
@@ -14,11 +19,21 @@ def _forecast_outputs() -> list[Path]:
 
 
 def _churn_outputs() -> list[Path]:
-    return [ARTIFACT_PATHS["churn_predictions"], PROCESSED_DIR / "customer_churn_metrics.csv", PROCESSED_DIR / "customer_churn_shap_ranking.csv", ARTIFACT_PATHS["churn_report"]]
+    return [
+        ARTIFACT_PATHS["churn_predictions"],
+        PROCESSED_DIR / "customer_churn_metrics.csv",
+        PROCESSED_DIR / "customer_churn_shap_ranking.csv",
+        ARTIFACT_PATHS["churn_report"],
+    ]
 
 
 def _inventory_outputs() -> list[Path]:
-    return [ARTIFACT_PATHS["inventory_recommendations"], PROCESSED_DIR / "inventory_alerts.csv", PROCESSED_DIR / "inventory_metrics.csv", ARTIFACT_PATHS["inventory_report"]]
+    return [
+        ARTIFACT_PATHS["inventory_recommendations"],
+        PROCESSED_DIR / "inventory_alerts.csv",
+        PROCESSED_DIR / "inventory_metrics.csv",
+        ARTIFACT_PATHS["inventory_report"],
+    ]
 
 
 def _segmentation_outputs() -> list[Path]:
@@ -32,16 +47,12 @@ def _segmentation_outputs() -> list[Path]:
 
 
 def _monitoring_outputs() -> list[Path]:
-    return [ARTIFACT_PATHS["monitoring_dashboard"], ARTIFACT_PATHS["monitoring_summary"], MONITORING_DIR / "data_drift_report.html", MONITORING_DIR / "prediction_drift_report.html"]
-
-
-PIPELINE_TARGETS: dict[str, tuple[Callable[[], list[Path]], PipelineRunner]] = {
-    "forecasting": (_forecast_outputs, lambda: _run_forecasting()),
-    "churn": (_churn_outputs, lambda: _run_churn()),
-    "inventory": (_inventory_outputs, lambda: _run_inventory()),
-    "segmentation": (_segmentation_outputs, lambda: _run_segmentation()),
-    "monitoring": (_monitoring_outputs, lambda: _run_monitoring()),
-}
+    return [
+        ARTIFACT_PATHS["monitoring_dashboard"],
+        ARTIFACT_PATHS["monitoring_summary"],
+        MONITORING_DIR / "data_drift_report.html",
+        MONITORING_DIR / "prediction_drift_report.html",
+    ]
 
 
 def _run_forecasting() -> object:
@@ -74,17 +85,59 @@ def _run_monitoring() -> object:
     return run_drift_monitoring_pipeline()
 
 
-def ensure_artifacts(*categories: str) -> list[str]:
-    """Generate missing artifacts on demand for the requested dashboard categories."""
+PIPELINE_TARGETS: dict[str, tuple[Callable[[], list[Path]], PipelineRunner]] = {
+    "forecasting": (_forecast_outputs, _run_forecasting),
+    "churn": (_churn_outputs, _run_churn),
+    "inventory": (_inventory_outputs, _run_inventory),
+    "segmentation": (_segmentation_outputs, _run_segmentation),
+    "monitoring": (_monitoring_outputs, _run_monitoring),
+}
 
+
+def ensure_artifacts(*categories: str) -> list[str]:
+    """Generate missing artifacts on demand for the requested dashboard categories.
+
+    Returns the list of pipeline categories that were actually triggered.
+    Logs timing and surfaces errors via st.warning without crashing the dashboard.
+    """
     triggered: list[str] = []
+
     for category in categories:
         if category not in PIPELINE_TARGETS:
+            LOGGER.warning("Unknown pipeline category requested: %s", category)
             continue
-        required_paths, runner = PIPELINE_TARGETS[category]
-        missing = [path for path in required_paths() if not path.exists()]
+
+        required_paths_fn, runner = PIPELINE_TARGETS[category]
+        missing = [p for p in required_paths_fn() if not p.exists()]
         if not missing:
             continue
-        runner()
-        triggered.append(category)
+
+        LOGGER.info(
+            "Artifact bootstrap triggered for '%s' — %d missing file(s): %s",
+            category,
+            len(missing),
+            [p.name for p in missing],
+        )
+
+        start = time.perf_counter()
+        try:
+            runner()
+            elapsed = time.perf_counter() - start
+            LOGGER.info("Pipeline '%s' completed in %.2fs", category, elapsed)
+            triggered.append(category)
+        except Exception as exc:
+            elapsed = time.perf_counter() - start
+            LOGGER.error(
+                "Pipeline '%s' failed after %.2fs: %s",
+                category,
+                elapsed,
+                exc,
+                exc_info=True,
+            )
+            st.warning(
+                f"⚠️ Could not generate '{category}' artifacts: {exc}. "
+                "Some data may be unavailable.",
+                icon="⚠️",
+            )
+
     return triggered

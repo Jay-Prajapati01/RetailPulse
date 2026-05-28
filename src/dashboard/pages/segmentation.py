@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from src.dashboard.artifact_bootstrap import ensure_artifacts
 from src.dashboard.components import render_download_frame, render_page_shell, render_section_header, get_chart_width_kwargs
 from src.dashboard.data_access import load_segmentation_outputs, load_customer_intelligence
 from src.dashboard.visuals import cluster_distribution_chart, segment_profile_chart, segmentation_embedding_chart
@@ -11,6 +12,9 @@ from src.dashboard.session import ensure_defaults
 
 def render_segmentation_page() -> None:
     render_page_shell("Customer Segmentation", "Business personas and cluster structure for customer intelligence.")
+    with st.spinner("Preparing segmentation artifacts..."):
+        ensure_artifacts("segmentation")
+
     with st.spinner("Loading segmentation artifacts..."):
         outputs = load_segmentation_outputs()
         labels = outputs["labels"]
@@ -19,7 +23,7 @@ def render_segmentation_page() -> None:
         intelligence = load_customer_intelligence()
 
     if labels.empty:
-        st.warning("Segmentation outputs are not available yet. Run the segmentation pipeline first.")
+        st.error("Segmentation outputs could not be generated automatically. Check the pipeline dependencies.")
         return
 
     try:
