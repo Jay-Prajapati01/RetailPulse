@@ -130,8 +130,15 @@ def train_churn_model(X_train: pd.DataFrame, y_train: pd.Series) -> Pipeline:
 def evaluate_model(model: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> tuple[pd.DataFrame, dict[str, float], np.ndarray]:
     probabilities = model.predict_proba(X_test)[:, 1]
     predictions = (probabilities >= 0.5).astype(int)
+
+    # Guard against single-class test splits (can happen with small/sampled datasets)
+    if len(np.unique(y_test)) > 1:
+        roc_auc = float(roc_auc_score(y_test, probabilities))
+    else:
+        roc_auc = 0.0
+
     metrics = {
-        "roc_auc": float(roc_auc_score(y_test, probabilities)),
+        "roc_auc": roc_auc,
         "precision": float(precision_score(y_test, predictions, zero_division=0)),
         "recall": float(recall_score(y_test, predictions, zero_division=0)),
         "f1_score": float(f1_score(y_test, predictions, zero_division=0)),
@@ -201,26 +208,34 @@ def save_shap_artifacts(model: Pipeline, X_test: pd.DataFrame, output_prefix: st
     return summary_path, waterfall_path, shap_frame
 
 
+def _to_markdown_safe(frame: pd.DataFrame) -> str:
+    """Return a markdown table, falling back to CSV if tabulate is not installed."""
+    try:
+        return frame.to_markdown(index=False)
+    except ImportError:
+        return frame.to_csv(index=False)
+
+
 def build_report(metrics: dict[str, float], churn_results: pd.DataFrame, shap_frame: pd.DataFrame, report_path: Path, threshold_days: int) -> None:
     high_risk = churn_results.sort_values("churn_probability", ascending=False).head(10).copy()
     lines = [
         "# RetailPulse Churn Prediction Report",
         "",
-        f"## Churn Logic",
+        "## Churn Logic",
         "",
         f"Customers are labeled as churned when inactivity reaches at least {threshold_days} days.",
         "",
         "## Evaluation Metrics",
         "",
-        pd.DataFrame([metrics]).to_markdown(index=False),
+        _to_markdown_safe(pd.DataFrame([metrics])),
         "",
         "## Top Risk Customers",
         "",
-        high_risk[["recency_days", "frequency", "total_revenue", "churn_probability", "risk_band"]].to_markdown(index=False),
+        _to_markdown_safe(high_risk[["recency_days", "frequency", "total_revenue", "churn_probability", "risk_band"]]),
         "",
         "## SHAP Feature Ranking",
         "",
-        shap_frame.head(12).to_markdown(index=False),
+        _to_markdown_safe(shap_frame.head(12)),
         "",
         "## Business Interpretation",
         "",

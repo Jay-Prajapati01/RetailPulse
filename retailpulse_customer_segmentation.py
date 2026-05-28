@@ -17,6 +17,14 @@ from sklearn.preprocessing import StandardScaler
 from retailpulse_feature_pipeline import MODELS_DIR, FIGURES_DIR, PROCESSED_DIR, ensure_output_dirs
 
 
+def _tabulate_available() -> bool:
+    try:
+        import tabulate  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def load_customer_rfm() -> pd.DataFrame:
     file_path = PROCESSED_DIR / "customer_rfm.csv"
     frame = pd.read_csv(file_path)
@@ -114,15 +122,15 @@ def save_cluster_report(clustered: pd.DataFrame, kmeans_score: float, dbscan_sco
         "",
         "## KMeans Cluster Profile",
         "",
-        kmeans_profile.to_markdown(),
+        kmeans_profile.to_markdown() if _tabulate_available() else kmeans_profile.to_csv(),
         "",
         "## DBSCAN Cluster Profile",
         "",
-        dbscan_profile.to_markdown(),
+        dbscan_profile.to_markdown() if _tabulate_available() else dbscan_profile.to_csv(),
         "",
         "## Persona Distribution",
         "",
-        persona_counts.to_markdown(),
+        persona_counts.to_markdown() if _tabulate_available() else persona_counts.to_csv(),
         "",
         "## Business Insights",
         "",

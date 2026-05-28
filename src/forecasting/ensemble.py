@@ -299,24 +299,31 @@ def save_error_chart(frame: pd.DataFrame, output_path: Path) -> Path:
 def build_report(evaluation: pd.DataFrame, metrics: pd.DataFrame, weights: dict[str, float], report_path: Path, future_forecast: pd.DataFrame) -> None:
     future_summary = future_forecast[["date", "prophet_yhat", "lstm_yhat", "ensemble_yhat", "prophet_quantity_forecast", "lstm_quantity_forecast", "ensemble_quantity_forecast"]].head(10).copy()
     future_summary["date"] = pd.to_datetime(future_summary["date"]).dt.strftime("%Y-%m-%d")
+
+    def _md(frame: pd.DataFrame) -> str:
+        try:
+            return frame.to_markdown(index=False)
+        except ImportError:
+            return frame.to_csv(index=False)
+
     lines = [
         "# RetailPulse Hybrid Forecast Ensemble Report",
         "",
         "## Ensemble Weights",
         "",
-        pd.DataFrame([weights]).to_markdown(index=False),
+        _md(pd.DataFrame([weights])),
         "",
         "## Model Comparison",
         "",
-        metrics.to_markdown(index=False),
+        _md(metrics),
         "",
         "## Evaluation Window",
         "",
-        evaluation[["date", "total_price", "prophet_yhat", "lstm_yhat", "ensemble_yhat"]].to_markdown(index=False),
+        _md(evaluation[["date", "total_price", "prophet_yhat", "lstm_yhat", "ensemble_yhat"]]),
         "",
         "## Future Forecast Summary",
         "",
-        future_summary.to_markdown(index=False),
+        _md(future_summary),
         "",
         "## Business Interpretation",
         "",

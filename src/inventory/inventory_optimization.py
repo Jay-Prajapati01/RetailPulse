@@ -163,6 +163,12 @@ def save_dashboard_chart(recommendations: pd.DataFrame, alerts: pd.DataFrame, sc
 
 
 def build_report(recommendations: pd.DataFrame, alerts: pd.DataFrame, report_path: Path) -> None:
+    def _md(frame: pd.DataFrame) -> str:
+        try:
+            return frame.to_markdown(index=False)
+        except ImportError:
+            return frame.to_csv(index=False)
+
     lines = [
         "# RetailPulse Inventory Optimization Report",
         "",
@@ -173,7 +179,7 @@ def build_report(recommendations: pd.DataFrame, alerts: pd.DataFrame, report_pat
         "",
         "## Reorder Recommendations",
         "",
-        recommendations[["StockCode", "Description", "current_stock", "reorder_point", "target_stock_level", "recommended_order_qty", "risk_flag"]].head(15).to_markdown(index=False),
+        _md(recommendations[["StockCode", "Description", "current_stock", "reorder_point", "target_stock_level", "recommended_order_qty", "risk_flag"]].head(15)),
         "",
         "## Business Interpretation",
         "",

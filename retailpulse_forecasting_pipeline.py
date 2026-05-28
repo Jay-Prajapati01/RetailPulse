@@ -92,12 +92,18 @@ def save_decomposition_plot(series: pd.Series, period: int, title: str, file_nam
 
 
 def build_forecasting_report(daily_stats: dict[str, object], weekly_stats: dict[str, object], product_stats: dict[str, object], report_path: Path) -> None:
+    def _md(frame: pd.DataFrame) -> str:
+        try:
+            return frame.to_markdown(index=False)
+        except ImportError:
+            return frame.to_csv(index=False)
+
     lines = [
         "# RetailPulse Forecasting Readiness Report",
         "",
         "## Stationarity Results",
         "",
-        pd.DataFrame([daily_stats, weekly_stats, product_stats]).to_markdown(index=False),
+        _md(pd.DataFrame([daily_stats, weekly_stats, product_stats])),
         "",
         "## Interpretation",
         "",
