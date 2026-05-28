@@ -1,5 +1,4 @@
 setuptools>=70.0.0
-
 streamlit==1.35.0
 pandas==2.2.2
 numpy==1.26.4
@@ -14,11 +13,11 @@ xgboost==2.1.0
 lightgbm==4.5.0
 mlflow==2.14.3
 pyyaml==6.0.2
-optuna==3.6.1
-evidently==0.4.30
+altair==5.3.0
 openpyxl==3.1.5
 reportlab==4.2.2
-altair==5.3.0
-prophet==1.1.5
 shap==0.45.1
-pyarrow==15.0.2
+evidently==0.4.30
+optuna==3.6.1
+pyarrow>=15.0.0
+prophet>=1.1.5

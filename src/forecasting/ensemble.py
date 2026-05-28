@@ -14,10 +14,16 @@ import mlflow
 import mlflow.sklearn
 import numpy as np
 import pandas as pd
-import torch
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-from retailpulse_lstm_pipeline import RetailDemandLSTM
+try:
+    import torch
+    from retailpulse_lstm_pipeline import RetailDemandLSTM
+    _TORCH_AVAILABLE = True
+except ImportError:  # pragma: no cover — torch not installed in dashboard-only env
+    torch = None  # type: ignore[assignment]
+    RetailDemandLSTM = None  # type: ignore[assignment,misc]
+    _TORCH_AVAILABLE = False
 from retailpulse_mlflow_utils import log_dataframe_artifact, log_json_artifact, log_text_artifact, safe_register_model, setup_mlflow, start_mlflow_run
 
 ROOT_DIR = Path(__file__).resolve().parents[2]

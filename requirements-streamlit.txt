@@ -1,2 +1,1 @@
-# Streamlit Cloud deployment — pinned to requirements.txt
 -r requirements.txt
