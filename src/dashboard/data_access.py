@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from src.dashboard.artifact_bootstrap import ensure_artifacts
 from src.dashboard.config import ARTIFACT_PATHS, FIGURES_DIR, MODELS_DIR, MONITORING_DIR, PROCESSED_DIR
 
 
@@ -30,6 +31,7 @@ def read_text(path: Path) -> str:
 
 @st.cache_data(ttl=600)
 def load_forecast_comparison() -> pd.DataFrame:
+    ensure_artifacts("forecasting")
     frame = read_csv(ARTIFACT_PATHS["forecast_eval"], parse_dates=["date"])
     if frame.empty:
         return frame
@@ -38,6 +40,7 @@ def load_forecast_comparison() -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def load_future_forecast() -> pd.DataFrame:
+    ensure_artifacts("forecasting")
     frame = read_csv(ARTIFACT_PATHS["forecast_data"], parse_dates=["date"])
     if frame.empty:
         return frame
@@ -46,6 +49,7 @@ def load_future_forecast() -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def load_segmentation_outputs() -> dict[str, pd.DataFrame]:
+    ensure_artifacts("segmentation")
     return {
         "labels": read_csv(PROCESSED_DIR / "customer_cluster_labels.csv"),
         "kmeans_profile": read_csv(PROCESSED_DIR / "cluster_profile_kmeans.csv"),
@@ -76,6 +80,7 @@ def load_customer_intelligence() -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def load_churn_outputs() -> dict[str, pd.DataFrame | dict[str, Any]]:
+    ensure_artifacts("churn")
     return {
         "predictions": read_csv(ARTIFACT_PATHS["churn_predictions"]),
         "metrics": read_csv(PROCESSED_DIR / "customer_churn_metrics.csv"),
@@ -86,6 +91,7 @@ def load_churn_outputs() -> dict[str, pd.DataFrame | dict[str, Any]]:
 
 @st.cache_data(ttl=600)
 def load_inventory_outputs() -> dict[str, pd.DataFrame | dict[str, Any]]:
+    ensure_artifacts("inventory")
     return {
         "recommendations": read_csv(ARTIFACT_PATHS["inventory_recommendations"]),
         "alerts": read_csv(PROCESSED_DIR / "inventory_alerts.csv"),
@@ -96,11 +102,13 @@ def load_inventory_outputs() -> dict[str, pd.DataFrame | dict[str, Any]]:
 
 @st.cache_data(ttl=300)
 def load_monitoring_summary() -> dict[str, Any]:
+    ensure_artifacts("monitoring")
     return read_json(ARTIFACT_PATHS["monitoring_summary"])
 
 
 @st.cache_data(ttl=300)
 def load_monitoring_reports() -> dict[str, str]:
+    ensure_artifacts("monitoring")
     return {
         "html": read_text(ARTIFACT_PATHS["monitoring_dashboard"]),
         "data_drift_html": read_text(MONITORING_DIR / "data_drift_report.html"),
@@ -149,6 +157,7 @@ def load_optuna_outputs() -> dict[str, pd.DataFrame]:
 
 @st.cache_data(ttl=600)
 def load_dashboard_summary() -> dict[str, Any]:
+    ensure_artifacts("forecasting", "churn", "inventory", "segmentation", "monitoring")
     churn = load_churn_outputs()
     inventory = load_inventory_outputs()
     monitoring = load_monitoring_summary()  # optimized: only loads JSON metadata

@@ -41,6 +41,12 @@ Thumbs.db
 # Jupyter notebooks checkpoints
 .ipynb_checkpoints/
 
+# Streamlit Cloud and generated outputs
+.streamlit/
+outputs/
+artifacts/
+cache/
+
 # Docker runtime logs and temp files
 docker/logs/
 docker/**/logs/
