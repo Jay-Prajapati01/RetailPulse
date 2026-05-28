@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from src.dashboard.artifact_bootstrap import ensure_artifacts
 from src.dashboard.components import render_download_frame, render_page_shell, render_section_header, get_chart_width_kwargs
 from src.dashboard.data_access import load_churn_outputs
 from src.dashboard.visuals import churn_feature_profile_chart, churn_probability_profile_chart, churn_risk_chart, customer_explanation_table, top_shap_features_chart
@@ -11,6 +12,9 @@ from src.dashboard.session import ensure_defaults
 
 def render_churn_page() -> None:
     render_page_shell("Churn Analytics", "Retention risk, customer-level signals, and explainable drivers.")
+    with st.spinner("Preparing churn artifacts..."):
+        ensure_artifacts("churn")
+
     with st.spinner("Loading churn outputs..."):
         outputs = load_churn_outputs()
         predictions = outputs["predictions"]
@@ -20,7 +24,7 @@ def render_churn_page() -> None:
     ensure_defaults({"selected_risk_band": "All", "actual_filter": "All"})
 
     if predictions.empty:
-        st.warning("Churn outputs are not available yet. Run the churn pipeline first.")
+        st.error("Churn outputs could not be generated automatically. Check the pipeline dependencies.")
         return
 
     metric_map = metrics.iloc[0].to_dict() if not metrics.empty else {}
