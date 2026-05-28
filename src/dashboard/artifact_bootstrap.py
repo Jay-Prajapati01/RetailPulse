@@ -1,3 +1,11 @@
+"""Artifact bootstrap module for RetailPulse dashboard.
+
+NOTE: This module is currently DISABLED for visualization-only deployment.
+All artifacts are pre-generated locally and committed to the repository.
+The ensure_artifacts() function is no longer called from dashboard pages.
+
+This module is preserved for local development and future production orchestration.
+"""
 from __future__ import annotations
 
 import logging

@@ -1,0 +1,22 @@
+{
+  "threshold_days": 90,
+  "features": [
+    "recency_days",
+    "frequency",
+    "total_revenue",
+    "avg_unit_price",
+    "avg_basket_size",
+    "orders_per_day",
+    "revenue_per_order",
+    "units_per_order",
+    "tenure_days",
+    "purchase_span_days",
+    "inactivity_duration",
+    "avg_purchase_interval",
+    "order_consistency",
+    "customer_lifetime_value",
+    "purchase_velocity",
+    "monetary_per_day",
+    "basket_value_stability"
+  ]
+}

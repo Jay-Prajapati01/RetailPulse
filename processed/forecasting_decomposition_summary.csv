@@ -1,0 +1,3 @@
+series,title,status,trend_mean,seasonal_mean,resid_std
+daily_sales_total_price,Daily Sales Seasonal Decomposition,saved,28152.13859682141,43.45861997654713,13258.938030714104
+weekly_sales_total_price,Weekly Sales Seasonal Decomposition,saved,196880.58424492925,116.03333209680413,43873.67674802488

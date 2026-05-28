@@ -1,0 +1,19 @@
+{
+  "metrics": {
+    "data_drift_score": 0.15153162615273502,
+    "prediction_drift_score": 0.039564925084857504,
+    "model_reliability_score": 0.8089034487624074,
+    "forecasting_degradation_risk": 0.09554827561879627,
+    "behavior_shift_proxy": 0.2389647076493694
+  },
+  "drift_summary": {
+    "total_price_mean_shift": 0.2606016791364887,
+    "total_price_std_shift": 0.13439819427791397,
+    "quantity_mean_shift": 0.19256772129287228,
+    "quantity_std_shift": 0.08930365469304044,
+    "invoice_count_mean_shift": 0.18255089174953737,
+    "invoice_count_std_shift": 0.03897920602685174,
+    "customer_count_mean_shift": 0.21732773616225007,
+    "customer_count_std_shift": 0.09652392588292565
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "study_name": "retailpulse_lstm_optuna",
+  "direction": "1",
+  "best_value": 0.0062116230838000774,
+  "best_params": {
+    "sequence_length": 43,
+    "batch_size": 16,
+    "hidden_size": 68,
+    "num_layers": 1,
+    "dropout": 0.02001179189417899,
+    "learning_rate": 0.0048362657732545925,
+    "max_epochs": 23
+  },
+  "trials": [
+    {
+      "number": 0,
+      "value": 0.0062116230838000774,
+      "params": {
+        "sequence_length": 43,
+        "batch_size": 16,
+        "hidden_size": 68,
+        "num_layers": 1,
+        "dropout": 0.02001179189417899,
+        "learning_rate": 0.0048362657732545925,
+        "max_epochs": 23
+      },
+      "state": "TrialState.COMPLETE"
+    }
+  ]
+}

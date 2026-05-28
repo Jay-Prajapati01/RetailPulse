@@ -3,7 +3,6 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from src.dashboard.artifact_bootstrap import ensure_artifacts
 from src.dashboard.components import render_download_frame, render_page_shell, render_section_header, get_chart_width_kwargs
 from src.dashboard.data_access import load_forecast_comparison, load_future_forecast
 from src.dashboard.forecasting_simulation import run_what_if
@@ -13,9 +12,6 @@ from src.dashboard.session import ensure_defaults
 
 def render_forecasting_page() -> None:
     render_page_shell("Demand Forecasting", "Interactive forecast intelligence with historical comparison and what-if simulation.")
-
-    with st.spinner("Preparing forecast artifacts..."):
-        ensure_artifacts("forecasting")
 
     with st.spinner("Loading forecast artifacts..."):
         forecast = load_forecast_comparison()

@@ -12,11 +12,11 @@ __pycache__/
 
 # Datasets & Heavy files
 online_retail_II.xlsx
-processed/
+processed/retail_transactions_raw.csv
+processed/retail_transactions_cleaned.csv
 
-# MLflow tracking and Models
+# MLflow tracking (keep models/ and processed/ for deployment)
 mlruns/
-models/
 
 # Environment configurations and Secrets
 .env
@@ -41,10 +41,7 @@ Thumbs.db
 # Jupyter notebooks checkpoints
 .ipynb_checkpoints/
 
-# Streamlit Cloud and generated outputs
-.streamlit/
-outputs/
-artifacts/
+# Streamlit Cloud (keep outputs/ and artifacts/ for deployment)
 cache/
 
 # Docker runtime logs and temp files

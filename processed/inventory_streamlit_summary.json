@@ -1,0 +1,11 @@
+{
+  "recommendations_csv": "C:\\Users\\jay19\\Desktop\\Zidio Project\\processed\\inventory_recommendations.csv",
+  "alerts_csv": "C:\\Users\\jay19\\Desktop\\Zidio Project\\processed\\inventory_alerts.csv",
+  "metrics_csv": "C:\\Users\\jay19\\Desktop\\Zidio Project\\processed\\inventory_metrics.csv",
+  "report": "C:\\Users\\jay19\\Desktop\\Zidio Project\\processed\\inventory_optimization_report.md",
+  "charts": [
+    "C:\\Users\\jay19\\Desktop\\Zidio Project\\processed\\figures\\inventory_stock_risk.png",
+    "C:\\Users\\jay19\\Desktop\\Zidio Project\\processed\\figures\\inventory_reorder_schedule.png",
+    "C:\\Users\\jay19\\Desktop\\Zidio Project\\processed\\figures\\inventory_health_dashboard.png"
+  ]
+}

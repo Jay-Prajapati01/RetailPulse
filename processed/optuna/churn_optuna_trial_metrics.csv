@@ -1,0 +1,3 @@
+metric,value
+best_roc_auc,0.9999814814814815
+validation_roc_auc,0.9999814814814815

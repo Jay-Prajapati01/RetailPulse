@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RetailPulse Monitoring Dashboard</title>
+    <style>
+        body { font-family: Segoe UI, Arial, sans-serif; margin: 0; padding: 24px; background: #0f172a; color: #e5e7eb; }
+        .card { background: #111827; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .metric { background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; }
+        a { color: #38bdf8; }
+        img { max-width: 100%; border-radius: 14px; border: 1px solid #334155; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>RetailPulse Monitoring Dashboard</h1>
+        <p>Overview of data drift, prediction drift, and behavior shifts detected in the current monitoring window.</p>
+    </div>
+    <div class="card grid">
+        <div class="metric"><strong>Model Reliability</strong><div>0.809</div></div>
+        <div class="metric"><strong>Forecast Degradation Risk</strong><div>0.096</div></div>
+        <div class="metric"><strong>Behavior Shift Proxy</strong><div>0.239</div></div>
+        <div class="metric"><strong>Data Drift Score</strong><div>0.152</div></div>
+    </div>
+    <div class="card">
+        <h2>Dashboard Image</h2>
+        <img src="monitoring_dashboard.png" alt="Monitoring dashboard chart" />
+    </div>
+    <div class="card">
+        <h2>Reports</h2>
+        <ul>
+            <li><a href="data_drift_report.html">Data drift report</a></li>
+            <li><a href="prediction_drift_report.html">Prediction drift report</a></li>
+        </ul>
+    </div>
+</body>
+</html>

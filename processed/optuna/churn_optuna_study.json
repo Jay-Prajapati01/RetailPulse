@@ -1,0 +1,32 @@
+{
+  "study_name": "retailpulse_churn_optuna",
+  "direction": "2",
+  "best_value": 0.9999814814814815,
+  "best_params": {
+    "n_estimators": 385,
+    "max_depth": 5,
+    "learning_rate": 0.12928677266811467,
+    "subsample": 0.9887391151409386,
+    "colsample_bytree": 0.896667227882239,
+    "min_child_weight": 1.6702215527028113,
+    "reg_lambda": 3.442290164654627,
+    "reg_alpha": 0.1535926907104065
+  },
+  "trials": [
+    {
+      "number": 0,
+      "value": 0.9999814814814815,
+      "params": {
+        "n_estimators": 385,
+        "max_depth": 5,
+        "learning_rate": 0.12928677266811467,
+        "subsample": 0.9887391151409386,
+        "colsample_bytree": 0.896667227882239,
+        "min_child_weight": 1.6702215527028113,
+        "reg_lambda": 3.442290164654627,
+        "reg_alpha": 0.1535926907104065
+      },
+      "state": "TrialState.COMPLETE"
+    }
+  ]
+}

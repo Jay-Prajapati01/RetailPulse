@@ -1,0 +1,18 @@
+{
+  "study_name": "retailpulse_ensemble_optuna",
+  "direction": "1",
+  "best_value": 45895.278403528544,
+  "best_params": {
+    "prophet_weight": 0.13175964852825617
+  },
+  "trials": [
+    {
+      "number": 0,
+      "value": 45895.278403528544,
+      "params": {
+        "prophet_weight": 0.13175964852825617
+      },
+      "state": "TrialState.COMPLETE"
+    }
+  ]
+}

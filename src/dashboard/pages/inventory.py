@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.dashboard.artifact_bootstrap import ensure_artifacts
 from src.dashboard.components import render_download_frame, render_page_shell, render_section_header, get_chart_width_kwargs
 from src.dashboard.data_access import load_inventory_outputs
 from src.dashboard.visuals import inventory_heatmap_chart, inventory_risk_chart, reorder_timeline_chart
@@ -11,8 +10,6 @@ from src.dashboard.session import ensure_defaults
 
 def render_inventory_page() -> None:
     render_page_shell("Inventory Optimization", "Reorder intelligence and stock health for retail operations.")
-    with st.spinner("Preparing inventory artifacts..."):
-        ensure_artifacts("inventory")
 
     with st.spinner("Loading inventory outputs..."):
         outputs = load_inventory_outputs()

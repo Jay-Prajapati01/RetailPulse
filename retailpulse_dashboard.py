@@ -1,7 +1,7 @@
 """RetailPulse Dashboard – Streamlit entry point.
 
-This file is the single entry point that Docker and `streamlit run` execute.
-It delegates entirely to the multi-page application defined in src/dashboard/app.py.
+Visualization-only dashboard that loads pre-generated ML artifacts.
+All analytics are generated locally and committed to the repository.
 """
 from __future__ import annotations
 

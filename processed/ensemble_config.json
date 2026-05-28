@@ -1,0 +1,18 @@
+{
+  "weights": {
+    "prophet": 0.13175964852825617,
+    "lstm": 0.8682403514717438
+  },
+  "metrics": {
+    "prophet_mape": 40107882945335.12,
+    "prophet_rmse": 33095.29386469438,
+    "prophet_mae": 20577.887842723834,
+    "lstm_mape": 33815352638629.664,
+    "lstm_rmse": 49256.907329494985,
+    "lstm_mae": 38244.09358145125,
+    "ensemble_mape": 34644454220192.035,
+    "ensemble_rmse": 45895.278403528544,
+    "ensemble_mae": 34615.84879323591
+  },
+  "forecast_horizon": 30
+}

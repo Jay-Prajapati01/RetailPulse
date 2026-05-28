@@ -3,7 +3,6 @@ from __future__ import annotations
 import streamlit as st
 import streamlit.components.v1 as components
 
-from src.dashboard.artifact_bootstrap import ensure_artifacts
 from src.dashboard.components import render_page_shell, render_section_header, get_chart_width_kwargs
 from src.dashboard.data_access import load_monitoring_summary, load_mlflow_summary
 from src.dashboard.visuals import drift_breakdown_chart, drift_summary_chart, health_gauge
@@ -11,8 +10,6 @@ from src.dashboard.visuals import drift_breakdown_chart, drift_summary_chart, he
 
 def render_monitoring_page() -> None:
     render_page_shell("Monitoring", "Drift detection, model reliability, and behavior-shift visibility.")
-    with st.spinner("Preparing monitoring artifacts..."):
-        ensure_artifacts("monitoring")
 
     with st.spinner("Loading monitoring artifacts..."):
         mon_summary = load_monitoring_summary()

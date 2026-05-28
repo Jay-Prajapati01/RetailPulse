@@ -1,0 +1,9 @@
+{
+  "sequence_length": 43,
+  "batch_size": 16,
+  "hidden_size": 68,
+  "num_layers": 1,
+  "dropout": 0.02001179189417899,
+  "learning_rate": 0.0048362657732545925,
+  "max_epochs": 23
+}
