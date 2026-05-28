@@ -9,7 +9,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import mlflow
 import numpy as np
 import pandas as pd
 import shap
@@ -25,7 +24,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
-from retailpulse_mlflow_utils import log_dataframe_artifact, log_json_artifact, log_text_artifact, safe_register_model, setup_mlflow, start_mlflow_run
+try:
+    import mlflow
+    import mlflow.sklearn
+    from retailpulse_mlflow_utils import log_dataframe_artifact, log_json_artifact, log_text_artifact, safe_register_model, setup_mlflow, start_mlflow_run
+    _MLFLOW_AVAILABLE = True
+except ImportError:
+    _MLFLOW_AVAILABLE = False
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 PROCESSED_DIR = ROOT_DIR / "processed"
@@ -246,23 +251,25 @@ def run_churn_prediction_pipeline(churn_threshold_days: int = 90) -> ChurnRunRes
 
     evaluation_frame.to_csv(predictions_path, index=False)
     pd.DataFrame([metrics]).to_csv(metrics_path, index=False)
+    shap_frame.to_csv(PROCESSED_DIR / "customer_churn_shap_ranking.csv", index=False)
     model_path.parent.mkdir(parents=True, exist_ok=True)
     import joblib
 
     joblib.dump({"model": model, "threshold_days": churn_threshold_days, "feature_columns": list(X.columns)}, model_path)
     build_report(metrics, evaluation_frame, shap_frame, report_path, churn_threshold_days)
 
-    setup_mlflow("RetailPulse")
-    with start_mlflow_run("day9_churn_prediction") as run:
-        mlflow.log_params({"churn_threshold_days": churn_threshold_days, "model_type": "xgboost"})
-        mlflow.log_metrics(metrics)
-        log_dataframe_artifact(evaluation_frame, "customer_churn_predictions.csv")
-        log_dataframe_artifact(pd.DataFrame([metrics]), "customer_churn_metrics.csv")
-        log_dataframe_artifact(shap_frame, "customer_churn_shap_ranking.csv")
-        log_text_artifact(report_path.read_text(encoding="utf-8"), "churn_prediction_report.md")
-        log_json_artifact({"threshold_days": churn_threshold_days, "features": list(X.columns)}, "churn_config.json")
-        mlflow.sklearn.log_model(model, artifact_path="churn_model")
-        safe_register_model(f"runs:/{run.info.run_id}/churn_model", "RetailPulseChurnClassifier")
+    if _MLFLOW_AVAILABLE:
+        setup_mlflow("RetailPulse")
+        with start_mlflow_run("day9_churn_prediction") as run:
+            mlflow.log_params({"churn_threshold_days": churn_threshold_days, "model_type": "xgboost"})
+            mlflow.log_metrics(metrics)
+            log_dataframe_artifact(evaluation_frame, "customer_churn_predictions.csv")
+            log_dataframe_artifact(pd.DataFrame([metrics]), "customer_churn_metrics.csv")
+            log_dataframe_artifact(shap_frame, "customer_churn_shap_ranking.csv")
+            log_text_artifact(report_path.read_text(encoding="utf-8"), "churn_prediction_report.md")
+            log_json_artifact({"threshold_days": churn_threshold_days, "features": list(X.columns)}, "churn_config.json")
+            mlflow.sklearn.log_model(model, artifact_path="churn_model")
+            safe_register_model(f"runs:/{run.info.run_id}/churn_model", "RetailPulseChurnClassifier")
 
     return ChurnRunResult(
         model_path=model_path,

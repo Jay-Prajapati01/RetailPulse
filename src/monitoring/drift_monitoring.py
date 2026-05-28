@@ -9,21 +9,24 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import mlflow
 import numpy as np
 import pandas as pd
 
-try:  # pragma: no cover - version-dependent import path
+try:
+    import mlflow
+    from retailpulse_mlflow_utils import log_json_artifact, log_text_artifact, setup_mlflow, start_mlflow_run
+    _MLFLOW_AVAILABLE = True
+except ImportError:
+    _MLFLOW_AVAILABLE = False
+
+try:
     from evidently import Report
     from evidently.presets.drift import DataDriftPreset
-    from evidently.presets.regression import RegressionPreset
-except Exception:  # pragma: no cover
-    from evidently import Report
-    from evidently.presets.drift import DataDriftPreset
-    from evidently.presets.regression import RegressionPreset
+    _EVIDENTLY_AVAILABLE = True
+except Exception:
+    _EVIDENTLY_AVAILABLE = False
 
 from retailpulse_feature_pipeline import PROCESSED_DIR
-from retailpulse_mlflow_utils import log_json_artifact, log_text_artifact, setup_mlflow, start_mlflow_run
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 MONITORING_DIR = ROOT_DIR / "monitoring"
@@ -64,9 +67,26 @@ def load_reference_current_forecasts(split_ratio: float = 0.5) -> tuple[pd.DataF
 
 
 def build_evidently_report(reference_data: pd.DataFrame, current_data: pd.DataFrame, metrics: list[Any], output_path: Path) -> Path:
-    report = Report(metrics=metrics)
-    snapshot = report.run(reference_data=reference_data, current_data=current_data)
-    snapshot.save_html(str(output_path))
+    """Generate a drift report. Uses Evidently if available, otherwise writes a lightweight HTML fallback."""
+    if _EVIDENTLY_AVAILABLE:
+        report = Report(metrics=metrics)
+        snapshot = report.run(reference_data=reference_data, current_data=current_data)
+        snapshot.save_html(str(output_path))
+    else:
+        # Lightweight fallback: simple stats comparison table
+        rows = []
+        for col in reference_data.select_dtypes("number").columns:
+            ref_mean = float(reference_data[col].mean())
+            cur_mean = float(current_data[col].mean())
+            shift = abs(cur_mean - ref_mean) / max(abs(ref_mean), 1e-6)
+            rows.append(f"<tr><td>{col}</td><td>{ref_mean:.4f}</td><td>{cur_mean:.4f}</td><td>{shift:.4f}</td></tr>")
+        html = (
+            "<html><body><h2>Drift Report (lightweight fallback)</h2>"
+            "<table border='1'><tr><th>Column</th><th>Ref mean</th><th>Cur mean</th><th>Shift</th></tr>"
+            + "".join(rows)
+            + "</table></body></html>"
+        )
+        output_path.write_text(html, encoding="utf-8")
     return output_path
 
 
@@ -182,10 +202,11 @@ def run_drift_monitoring_pipeline() -> DriftMonitoringResult:
     data_drift_columns = ["total_price", "quantity", "invoice_count", "customer_count", "day_of_week", "is_weekend", "month", "year", "week"]
     prediction_columns = ["total_price", "prophet_yhat", "lstm_yhat", "ensemble_yhat"]
 
-    build_evidently_report(reference_sales[data_drift_columns], current_sales[data_drift_columns], [DataDriftPreset()], data_drift_html)
+    evidently_metrics = [DataDriftPreset()] if _EVIDENTLY_AVAILABLE else []
+    build_evidently_report(reference_sales[data_drift_columns], current_sales[data_drift_columns], evidently_metrics, data_drift_html)
     prediction_reference = reference_forecasts[["total_price", "ensemble_yhat", "prophet_yhat", "lstm_yhat"]].rename(columns={"total_price": "target", "ensemble_yhat": "prediction"})
     prediction_current = current_forecasts[["total_price", "ensemble_yhat", "prophet_yhat", "lstm_yhat"]].rename(columns={"total_price": "target", "ensemble_yhat": "prediction"})
-    build_evidently_report(prediction_reference, prediction_current, [DataDriftPreset()], prediction_drift_html)
+    build_evidently_report(prediction_reference, prediction_current, evidently_metrics, prediction_drift_html)
 
     drift_summary = summarize_drift(reference_sales, current_sales, ["total_price", "quantity", "invoice_count", "customer_count"])
     data_drift_score = float(np.mean(list(drift_summary.values())))
@@ -202,11 +223,12 @@ def run_drift_monitoring_pipeline() -> DriftMonitoringResult:
     summary_json = DRIFT_REPORTS_DIR / "drift_monitoring_summary.json"
     summary_json.write_text(json.dumps({"metrics": metrics, "drift_summary": drift_summary}, indent=2), encoding="utf-8")
 
-    setup_mlflow("RetailPulse")
-    with start_mlflow_run("day12_drift_monitoring") as run:
-        mlflow.log_metrics(metrics)
-        log_json_artifact({"metrics": metrics, "drift_summary": drift_summary}, "drift_monitoring_summary.json")
-        log_text_artifact((DRIFT_REPORTS_DIR / "monitoring_dashboard.html").read_text(encoding="utf-8"), "monitoring_dashboard.html")
+    if _MLFLOW_AVAILABLE:
+        setup_mlflow("RetailPulse")
+        with start_mlflow_run("day12_drift_monitoring") as run:
+            mlflow.log_metrics(metrics)
+            log_json_artifact({"metrics": metrics, "drift_summary": drift_summary}, "drift_monitoring_summary.json")
+            log_text_artifact((DRIFT_REPORTS_DIR / "monitoring_dashboard.html").read_text(encoding="utf-8"), "monitoring_dashboard.html")
 
     return DriftMonitoringResult(
         data_drift_html=data_drift_html,

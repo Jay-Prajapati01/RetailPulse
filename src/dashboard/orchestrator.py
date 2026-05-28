@@ -4,6 +4,12 @@ Handles dependency-aware artifact generation so that downstream pipelines
 (e.g. inventory) always have their upstream dependencies (e.g. forecasting)
 satisfied before they run.
 
+Dependency order:
+  preprocessing → forecasting → inventory
+                              → monitoring
+  preprocessing → churn
+  preprocessing → segmentation
+
 Usage:
     from src.dashboard.orchestrator import ensure_forecasting, ensure_inventory, ensure_all
 """
@@ -20,6 +26,15 @@ LOGGER = logging.getLogger("retailpulse.orchestrator")
 # ---------------------------------------------------------------------------
 # Artifact presence checks
 # ---------------------------------------------------------------------------
+
+def _preprocessing_ready() -> bool:
+    """Core processed CSVs that all downstream pipelines depend on."""
+    required = [
+        PROCESSED_DIR / "daily_sales_forecasting.csv",
+        PROCESSED_DIR / "customer_base_features.csv",
+        PROCESSED_DIR / "product_daily_demand.csv",
+    ]
+    return all(p.exists() for p in required)
 
 def _forecast_ready() -> bool:
     return (
@@ -73,6 +88,28 @@ def _run_monitoring_pipeline() -> None:
     run_drift_monitoring_pipeline()
 
 
+def _run_preprocessing_pipeline() -> None:
+    from retailpulse_feature_pipeline import run_and_save_pipeline, DATA_FILE, ROOT_DIR as FP_ROOT
+    from pathlib import Path
+
+    # Prefer CSV if available (faster, no openpyxl overhead)
+    csv_path = FP_ROOT / "data" / "online_retail_II.csv"
+    xlsx_path = DATA_FILE  # online_retail_II.xlsx at root
+
+    if csv_path.exists():
+        LOGGER.info("Preprocessing: using CSV source %s", csv_path)
+        run_and_save_pipeline(data_file=csv_path)
+    elif xlsx_path.exists():
+        LOGGER.info("Preprocessing: using XLSX source %s", xlsx_path)
+        run_and_save_pipeline(data_file=xlsx_path)
+    else:
+        raise FileNotFoundError(
+            f"No source data file found. Expected one of:\n"
+            f"  {csv_path}\n  {xlsx_path}\n"
+            "Please add the data file to the repository."
+        )
+
+
 # ---------------------------------------------------------------------------
 # Public orchestration API
 # ---------------------------------------------------------------------------
@@ -93,14 +130,22 @@ def _run_with_timing(name: str, runner) -> None:
         raise
 
 
+def ensure_preprocessing() -> None:
+    """Ensure core processed CSVs exist, running the feature pipeline if missing."""
+    if not _preprocessing_ready():
+        _run_with_timing("preprocessing", _run_preprocessing_pipeline)
+
+
 def ensure_forecasting() -> None:
     """Ensure forecasting artifacts exist, generating them if missing."""
+    ensure_preprocessing()  # forecasting needs daily_sales_forecasting.csv
     if not _forecast_ready():
         _run_with_timing("forecasting", _run_forecasting_pipeline)
 
 
 def ensure_churn() -> None:
     """Ensure churn artifacts exist, generating them if missing."""
+    ensure_preprocessing()  # churn needs customer_base_features.csv
     if not _churn_ready():
         _run_with_timing("churn", _run_churn_pipeline)
 
@@ -111,13 +156,14 @@ def ensure_inventory() -> None:
     Inventory depends on forecasting outputs — forecasting is guaranteed
     to run first if its artifacts are missing.
     """
-    ensure_forecasting()  # dependency: inventory needs forecast CSVs
+    ensure_forecasting()  # also ensures preprocessing
     if not _inventory_ready():
         _run_with_timing("inventory", _run_inventory_pipeline)
 
 
 def ensure_segmentation() -> None:
     """Ensure segmentation artifacts exist, generating them if missing."""
+    ensure_preprocessing()  # segmentation needs customer_base_features.csv
     if not _segmentation_ready():
         _run_with_timing("segmentation", _run_segmentation_pipeline)
 
@@ -127,13 +173,14 @@ def ensure_monitoring() -> None:
 
     Monitoring depends on forecasting outputs being present.
     """
-    ensure_forecasting()  # dependency: monitoring needs forecast eval CSV
+    ensure_forecasting()  # also ensures preprocessing
     if not _monitoring_ready():
         _run_with_timing("monitoring", _run_monitoring_pipeline)
 
 
 def ensure_all() -> None:
     """Generate all artifacts in dependency order."""
+    ensure_preprocessing()
     ensure_forecasting()
     ensure_churn()
     ensure_inventory()

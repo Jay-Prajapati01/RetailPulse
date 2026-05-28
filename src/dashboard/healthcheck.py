@@ -19,7 +19,6 @@ REQUIRED_PACKAGES = [
     "sklearn",
     "plotly",
     "matplotlib",
-    "mlflow",
     "xgboost",
     "joblib",
     "scipy",
@@ -36,6 +35,7 @@ REQUIRED_DIRS = [
 ]
 
 REQUIRED_DATA_FILE = ROOT_DIR / "online_retail_II.xlsx"
+CSV_DATA_FILE = ROOT_DIR / "data" / "online_retail_II.csv"
 
 
 def _check_packages() -> list[str]:
@@ -80,15 +80,16 @@ def system_healthcheck() -> None:
     else:
         LOGGER.info("All required packages available")
 
-    # 3. Verify source dataset
-    if not REQUIRED_DATA_FILE.exists():
-        LOGGER.error(
-            "Healthcheck: source data file not found: %s. "
-            "Pipelines that depend on raw data will fail.",
+    # 3. Verify source dataset (xlsx or csv fallback)
+    if not REQUIRED_DATA_FILE.exists() and not CSV_DATA_FILE.exists():
+        LOGGER.warning(
+            "Healthcheck: no source data file found at %s or %s. "
+            "Pipelines will use pre-generated processed artifacts if available.",
             REQUIRED_DATA_FILE,
+            CSV_DATA_FILE,
         )
-        # Not raised — processed artifacts may already exist from a prior run.
     else:
-        LOGGER.info("Source data file found: %s", REQUIRED_DATA_FILE.name)
+        found = REQUIRED_DATA_FILE if REQUIRED_DATA_FILE.exists() else CSV_DATA_FILE
+        LOGGER.info("Source data file found: %s", found.name)
 
     LOGGER.info("Startup healthcheck complete")

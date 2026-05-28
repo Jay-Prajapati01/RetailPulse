@@ -10,11 +10,17 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import mlflow
-import mlflow.sklearn
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+try:
+    import mlflow
+    import mlflow.sklearn
+    from retailpulse_mlflow_utils import log_dataframe_artifact, log_json_artifact, log_text_artifact, safe_register_model, setup_mlflow, start_mlflow_run
+    _MLFLOW_AVAILABLE = True
+except ImportError:
+    _MLFLOW_AVAILABLE = False
 
 try:
     import torch
@@ -24,7 +30,6 @@ except ImportError:  # pragma: no cover — torch not installed in dashboard-onl
     torch = None  # type: ignore[assignment]
     RetailDemandLSTM = None  # type: ignore[assignment,misc]
     _TORCH_AVAILABLE = False
-from retailpulse_mlflow_utils import log_dataframe_artifact, log_json_artifact, log_text_artifact, safe_register_model, setup_mlflow, start_mlflow_run
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 PROCESSED_DIR = ROOT_DIR / "processed"
@@ -46,56 +51,52 @@ class HybridForecastResult:
     weights: dict[str, float]
 
 
-class HybridForecastPyFuncModel(mlflow.pyfunc.PythonModel):
-    def load_context(self, context):
-        with open(context.artifacts["prophet_model"], "rb") as handle:
-            self.prophet_model = pickle.load(handle)
-        self.lstm_state_dict = torch.load(context.artifacts["lstm_state_dict"], map_location="cpu")
-        with open(context.artifacts["lstm_config"], "r", encoding="utf-8") as handle:
-            self.lstm_config = json.load(handle)
-        with open(context.artifacts["lstm_scaler"], "rb") as handle:
-            self.scaler = pickle.load(handle)
-        with open(context.artifacts["ensemble_config"], "r", encoding="utf-8") as handle:
-            self.ensemble_config = json.load(handle)
+if _MLFLOW_AVAILABLE:
+    class HybridForecastPyFuncModel(mlflow.pyfunc.PythonModel):  # type: ignore[misc]
+        def load_context(self, context):
+            with open(context.artifacts["prophet_model"], "rb") as handle:
+                self.prophet_model = pickle.load(handle)
+            if _TORCH_AVAILABLE:
+                self.lstm_state_dict = torch.load(context.artifacts["lstm_state_dict"], map_location="cpu")
+            with open(context.artifacts["lstm_config"], "r", encoding="utf-8") as handle:
+                self.lstm_config = json.load(handle)
+            with open(context.artifacts["lstm_scaler"], "rb") as handle:
+                self.scaler = pickle.load(handle)
+            with open(context.artifacts["ensemble_config"], "r", encoding="utf-8") as handle:
+                self.ensemble_config = json.load(handle)
+            if _TORCH_AVAILABLE and RetailDemandLSTM is not None:
+                self.lstm_model = RetailDemandLSTM(
+                    input_size=self.lstm_config["input_size"],
+                    hidden_size=self.lstm_config["hidden_size"],
+                    num_layers=self.lstm_config["num_layers"],
+                    dropout=self.lstm_config["dropout"],
+                    learning_rate=self.lstm_config["learning_rate"],
+                )
+                self.lstm_model.load_state_dict(self.lstm_state_dict)
+                self.lstm_model.eval()
 
-        self.lstm_model = RetailDemandLSTM(
-            input_size=self.lstm_config["input_size"],
-            hidden_size=self.lstm_config["hidden_size"],
-            num_layers=self.lstm_config["num_layers"],
-            dropout=self.lstm_config["dropout"],
-            learning_rate=self.lstm_config["learning_rate"],
-        )
-        self.lstm_model.load_state_dict(self.lstm_state_dict)
-        self.lstm_model.eval()
-
-    def predict(self, context, model_input):
-        frame = pd.DataFrame(model_input).copy()
-        frame["date"] = pd.to_datetime(frame["date"])
-        frame = frame.sort_values("date")
-        if "total_price" not in frame.columns:
-            raise ValueError("Input data must include historical 'total_price' values.")
-
-        horizon = int(self.ensemble_config["forecast_horizon"])
-        sequence_length = int(self.ensemble_config["sequence_length"])
-        weights = self.ensemble_config["weights"]
-
-        prophet_future = self.prophet_model.make_future_dataframe(periods=horizon, freq="D")
-        prophet_forecast = self.prophet_model.predict(prophet_future).tail(horizon).reset_index(drop=True)
-
-        history_values = frame["total_price"].astype(float).to_numpy()
-        lstm_future = recursive_lstm_forecast(self.lstm_model, self.scaler, history_values, horizon=horizon, sequence_length=sequence_length)
-
-        combined = pd.DataFrame({
-            "ds": pd.to_datetime(prophet_forecast["ds"]),
-            "prophet_yhat": prophet_forecast["yhat"].to_numpy(dtype=float),
-            "lstm_yhat": lstm_future["lstm_yhat"].to_numpy(dtype=float),
-        })
-        combined["ensemble_yhat"] = (
-            weights["prophet"] * combined["prophet_yhat"] + weights["lstm"] * combined["lstm_yhat"]
-        )
-        avg_unit_price = float(self.ensemble_config["avg_unit_price"])
-        combined["forecast_quantity"] = combined["ensemble_yhat"] / avg_unit_price
-        return combined
+        def predict(self, context, model_input):
+            frame = pd.DataFrame(model_input).copy()
+            frame["date"] = pd.to_datetime(frame["date"])
+            frame = frame.sort_values("date")
+            if "total_price" not in frame.columns:
+                raise ValueError("Input data must include historical 'total_price' values.")
+            horizon = int(self.ensemble_config["forecast_horizon"])
+            sequence_length = int(self.ensemble_config["sequence_length"])
+            weights = self.ensemble_config["weights"]
+            prophet_future = self.prophet_model.make_future_dataframe(periods=horizon, freq="D")
+            prophet_forecast = self.prophet_model.predict(prophet_future).tail(horizon).reset_index(drop=True)
+            history_values = frame["total_price"].astype(float).to_numpy()
+            lstm_future = recursive_lstm_forecast(self.lstm_model, self.scaler, history_values, horizon=horizon, sequence_length=sequence_length)
+            combined = pd.DataFrame({
+                "ds": pd.to_datetime(prophet_forecast["ds"]),
+                "prophet_yhat": prophet_forecast["yhat"].to_numpy(dtype=float),
+                "lstm_yhat": lstm_future["lstm_yhat"].to_numpy(dtype=float),
+            })
+            combined["ensemble_yhat"] = weights["prophet"] * combined["prophet_yhat"] + weights["lstm"] * combined["lstm_yhat"]
+            avg_unit_price = float(self.ensemble_config["avg_unit_price"])
+            combined["forecast_quantity"] = combined["ensemble_yhat"] / avg_unit_price
+            return combined
 
 
 def load_daily_sales() -> pd.DataFrame:
@@ -391,30 +392,31 @@ def run_hybrid_forecasting_ensemble(horizon: int = 30, configured_weights: dict[
     save_error_chart(evaluation, error_chart_path)
     build_report(evaluation, evaluation_metrics, weights, report_path, future_forecast)
 
-    setup_mlflow("RetailPulse")
-    with start_mlflow_run("day8_hybrid_ensemble") as run:
-        mlflow.log_params({"forecast_horizon": horizon, "prophet_weight": weights["prophet"], "lstm_weight": weights["lstm"]})
-        for key, value in metrics_summary.items():
-            mlflow.log_metric(key, value)
-        log_json_artifact({"weights": weights, "metrics": metrics_summary, "forecast_horizon": horizon}, "ensemble_config.json")
-        log_dataframe_artifact(evaluation_metrics, "ensemble_metrics.csv")
-        log_dataframe_artifact(evaluation, "ensemble_evaluation_forecast.csv")
-        log_dataframe_artifact(future_forecast, "ensemble_future_30d_forecast.csv")
-        log_dataframe_artifact(future_forecast[["date", "lstm_yhat", "lstm_quantity_forecast"]], "lstm_future_30d_forecast.csv")
-        log_text_artifact(report_path.read_text(encoding="utf-8"), "ensemble_forecasting_report.md")
-
-        mlflow.pyfunc.log_model(
-            artifact_path="ensemble_model",
-            python_model=HybridForecastPyFuncModel(),
-            artifacts={
-                "prophet_model": str(MODELS_DIR / "prophet_model.pkl"),
-                "lstm_state_dict": str(MODELS_DIR / "lstm_model_state_dict.pt"),
-                "lstm_scaler": str(MODELS_DIR / "lstm_scaler.pkl"),
-                "lstm_config": str(MODELS_DIR / "lstm_config.json"),
-                "ensemble_config": str(config_path),
-            },
-        )
-        safe_register_model(f"runs:/{run.info.run_id}/ensemble_model", "RetailPulseHybridForecastEnsemble")
+    if _MLFLOW_AVAILABLE:
+        setup_mlflow("RetailPulse")
+        with start_mlflow_run("day8_hybrid_ensemble") as run:
+            mlflow.log_params({"forecast_horizon": horizon, "prophet_weight": weights["prophet"], "lstm_weight": weights["lstm"]})
+            for key, value in metrics_summary.items():
+                mlflow.log_metric(key, value)
+            log_json_artifact({"weights": weights, "metrics": metrics_summary, "forecast_horizon": horizon}, "ensemble_config.json")
+            log_dataframe_artifact(evaluation_metrics, "ensemble_metrics.csv")
+            log_dataframe_artifact(evaluation, "ensemble_evaluation_forecast.csv")
+            log_dataframe_artifact(future_forecast, "ensemble_future_30d_forecast.csv")
+            log_dataframe_artifact(future_forecast[["date", "lstm_yhat", "lstm_quantity_forecast"]], "lstm_future_30d_forecast.csv")
+            log_text_artifact(report_path.read_text(encoding="utf-8"), "ensemble_forecasting_report.md")
+            if _TORCH_AVAILABLE:
+                mlflow.pyfunc.log_model(
+                    artifact_path="ensemble_model",
+                    python_model=HybridForecastPyFuncModel(),
+                    artifacts={
+                        "prophet_model": str(MODELS_DIR / "prophet_model.pkl"),
+                        "lstm_state_dict": str(MODELS_DIR / "lstm_model_state_dict.pt"),
+                        "lstm_scaler": str(MODELS_DIR / "lstm_scaler.pkl"),
+                        "lstm_config": str(MODELS_DIR / "lstm_config.json"),
+                        "ensemble_config": str(config_path),
+                    },
+                )
+                safe_register_model(f"runs:/{run.info.run_id}/ensemble_model", "RetailPulseHybridForecastEnsemble")
 
     return HybridForecastResult(
         evaluation_path=evaluation_path,
