@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+  namespace: retailpulse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-webserver
+  template:
+    metadata:
+      labels:
+        app: airflow-webserver
+    spec:
+      containers:
+        - name: airflow-webserver
+          image: retailpulse-airflow:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          envFrom:
+            - configMapRef:
+                name: retailpulse-config
+            - secretRef:
+                name: retailpulse-secrets
+          command: ["bash", "-lc", "airflow webserver"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+  namespace: retailpulse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-scheduler
+  template:
+    metadata:
+      labels:
+        app: airflow-scheduler
+    spec:
+      containers:
+        - name: airflow-scheduler
+          image: retailpulse-airflow:latest
+          imagePullPolicy: IfNotPresent
+          readinessProbe:
+            exec:
+              command: ["bash", "-lc", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          livenessProbe:
+            exec:
+              command: ["bash", "-lc", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          envFrom:
+            - configMapRef:
+                name: retailpulse-config
+            - secretRef:
+                name: retailpulse-secrets
+          command: ["bash", "-lc", "airflow scheduler"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver
+  namespace: retailpulse
+spec:
+  selector:
+    app: airflow-webserver
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

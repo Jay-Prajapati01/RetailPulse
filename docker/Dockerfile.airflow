@@ -1,0 +1,9 @@
+FROM apache/airflow:2.6.3-python3.10
+
+# Optional: install project requirements into Airflow image so tasks can import project code
+COPY requirements.txt /requirements.txt
+USER root
+RUN pip install --no-cache-dir -r /requirements.txt || true
+USER airflow
+
+# The official image's entrypoint will be used by docker-compose to run webserver/scheduler/worker

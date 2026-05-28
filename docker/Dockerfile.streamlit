@@ -1,0 +1,27 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-streamlit.txt .
+
+RUN pip install --no-cache-dir -r requirements-streamlit.txt
+
+COPY retailpulse_dashboard.py .
+COPY src ./src
+COPY processed ./processed
+COPY models ./models
+COPY .streamlit ./.streamlit
+# monitoring/drift_reports contains HTML reports the dashboard embeds
+COPY monitoring ./monitoring
+
+EXPOSE 8501
+
+ENV STREAMLIT_SERVER_HEADLESS=true
+ENV PYTHONUNBUFFERED=1
+
+CMD ["streamlit", "run", "retailpulse_dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]

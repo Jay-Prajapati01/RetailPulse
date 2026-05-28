@@ -1,0 +1,54 @@
+name: RetailPulse CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install nbformat
+
+      - name: Compile Python sources
+        run: python -m compileall src
+
+      - name: Validate repository entrypoints
+        run: |
+          python -c "from src.dashboard.data_access import load_dashboard_summary; print(load_dashboard_summary())"
+          python -c "from src.dashboard.pages.inventory import render_inventory_page; print('inventory page import ok')"
+
+      - name: Validate YAML syntax
+        run: |
+          python - <<'PY'
+          import pathlib, yaml
+          for path in pathlib.Path('.').rglob('*.yml'):
+              list(yaml.safe_load_all(path.read_text(encoding='utf-8')))
+          for path in pathlib.Path('.').rglob('*.yaml'):
+              list(yaml.safe_load_all(path.read_text(encoding='utf-8')))
+          print('yaml-ok')
+          PY
+
+      - name: Validate notebooks (structure)
+        run: |
+          python - <<'PY'
+          import pathlib, nbformat
+          notebooks = list(pathlib.Path('.').rglob('*.ipynb'))
+          for notebook in notebooks:
+              nbformat.read(notebook, as_version=4)
+          print('notebooks-ok', len(notebooks))
+          PY

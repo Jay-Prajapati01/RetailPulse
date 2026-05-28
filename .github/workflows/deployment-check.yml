@@ -1,0 +1,43 @@
+name: RetailPulse Deployment Check
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'retailpulse_dashboard.py'
+      - 'src/**'
+      - 'requirements.txt'
+
+jobs:
+  streamlit-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start Streamlit app
+        run: |
+          nohup streamlit run retailpulse_dashboard.py --server.headless true --server.port 8501 > streamlit.log 2>&1 &
+          sleep 15
+
+      - name: Health check endpoint
+        run: |
+          curl --fail --retry 10 --retry-delay 2 http://localhost:8501/_stcore/health
+
+      - name: Upload Streamlit logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: streamlit-smoke-logs
+          path: streamlit.log

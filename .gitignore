@@ -1,0 +1,50 @@
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Datasets & Heavy files
+online_retail_II.xlsx
+processed/
+
+# MLflow tracking and Models
+mlruns/
+models/
+
+# Environment configurations and Secrets
+.env
+.env.bak
+.env.template
+
+# IDE settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+ehthumbs.db
+Thumbs.db
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Docker runtime logs and temp files
+docker/logs/
+docker/**/logs/
+
+# Local AI context and generated graph outputs
+.ai-context/
+graphify-out/

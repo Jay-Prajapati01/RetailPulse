@@ -1,0 +1,66 @@
+name: Validation
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  yaml-and-notebooks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        task: [yaml, notebooks]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml nbformat
+
+      - name: Run YAML validation
+        if: matrix.task == 'yaml'
+        run: |
+          python - <<'PY'
+          import pathlib, yaml, sys
+          errors = 0
+          for path in pathlib.Path('.').rglob('*.yml'):
+              try:
+                  list(yaml.safe_load_all(path.read_text(encoding='utf-8')))
+              except Exception as e:
+                  print('YAML ERROR', path, e)
+                  errors += 1
+          for path in pathlib.Path('.').rglob('*.yaml'):
+              try:
+                  list(yaml.safe_load_all(path.read_text(encoding='utf-8')))
+              except Exception as e:
+                  print('YAML ERROR', path, e)
+                  errors += 1
+          if errors:
+              sys.exit(2)
+          print('yaml-ok')
+          PY
+
+      - name: Run notebook validation
+        if: matrix.task == 'notebooks'
+        run: |
+          python - <<'PY'
+          import pathlib, nbformat, sys
+          errors = 0
+          for notebook in pathlib.Path('.').rglob('*.ipynb'):
+              try:
+                  nbformat.read(notebook, as_version=4)
+              except Exception as e:
+                  print('NOTEBOOK ERROR', notebook, e)
+                  errors += 1
+          if errors:
+              sys.exit(2)
+          print('notebooks-ok')
+          PY

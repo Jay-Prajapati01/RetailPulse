@@ -1,0 +1,12 @@
+.venv
+__pycache__
+mlruns
+graphify-out
+notebooks
+airflow/logs
+docker/logs
+*.pyc
+*.pyo
+*.pyd
+.git
+.ai-context
