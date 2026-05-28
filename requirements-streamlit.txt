@@ -1,22 +1,2 @@
-matplotlib
-streamlit>=1.32.0
-pandas
-numpy
-plotly
-altair
-pyyaml
-openpyxl
-reportlab
-scikit-learn
-streamlit
-pandas
-numpy
-scikit-learn
-plotly
-matplotlib
-seaborn
-scipy
-joblib
-statsmodels
-xgboost
-lightgbm
+# Streamlit Cloud deployment — pinned to requirements.txt
+-r requirements.txt

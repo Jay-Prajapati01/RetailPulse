@@ -68,9 +68,11 @@ def _run_churn() -> object:
 
 
 def _run_inventory() -> object:
-    from src.inventory.inventory_optimization import run_inventory_optimization_pipeline
-
-    return run_inventory_optimization_pipeline()
+    # Inventory depends on forecasting outputs — delegate to orchestrator
+    # so the dependency is always satisfied in the correct order.
+    from src.dashboard.orchestrator import ensure_inventory
+    ensure_inventory()
+    return None
 
 
 def _run_segmentation() -> object:
@@ -80,9 +82,10 @@ def _run_segmentation() -> object:
 
 
 def _run_monitoring() -> object:
-    from src.monitoring.drift_monitoring import run_drift_monitoring_pipeline
-
-    return run_drift_monitoring_pipeline()
+    # Monitoring depends on forecasting outputs — delegate to orchestrator.
+    from src.dashboard.orchestrator import ensure_monitoring
+    ensure_monitoring()
+    return None
 
 
 PIPELINE_TARGETS: dict[str, tuple[Callable[[], list[Path]], PipelineRunner]] = {
