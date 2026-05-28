@@ -1,10 +1,8 @@
-from __future__ import annotations
+"""Pages package for the dashboard.
 
-from src.dashboard.pages.home import render_home_page
-from src.dashboard.pages.forecasting import render_forecasting_page
-from src.dashboard.pages.segmentation import render_segmentation_page
-from src.dashboard.pages.churn import render_churn_page
-from src.dashboard.pages.inventory import render_inventory_page
-from src.dashboard.pages.monitoring import render_monitoring_page
-from src.dashboard.pages.reports import render_reports_page
-from src.dashboard.pages.settings import render_settings_page
+This module intentionally does not import individual page modules to avoid
+eagerly loading heavy dependencies at package import time. Page modules are
+imported dynamically by the application when the user navigates to them.
+"""
+
+__all__ = []
